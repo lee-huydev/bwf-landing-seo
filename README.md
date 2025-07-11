@@ -1,36 +1,124 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BWF Ventures Iframe SEO
+
+A Next.js 15 project optimized for SEO that displays an iframe of the BWF Ventures platform with advanced performance optimization and accessibility features.
+
+## Features
+
+- 🚀 **Next.js 15** with App Router
+- 🎯 **Advanced SEO** with next-seo
+- ⚡ **Performance Optimized** iframe loading
+- 🎨 **Tailwind CSS** for styling
+- 📱 **Responsive Design**
+- ♿ **Accessibility Compliant**
+- 🔒 **Security Headers** configured
+- 📊 **Bundle Analysis** support
+
+## Environment Setup
+
+Create a `.env.local` file in the root directory:
+
+```env
+# Iframe URL configuration
+NEXT_PUBLIC_IFRAME_URL=https://bwfventures.framer.website
+
+# SEO Configuration
+NEXT_PUBLIC_SITE_NAME=BWF Ventures - Iframe SEO
+NEXT_PUBLIC_SITE_DESCRIPTION=Professional iframe embedding with advanced SEO optimization
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
 
 ## Getting Started
 
-First, run the development server:
+1. **Install dependencies:**
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+   ```bash
+   npm install
+   ```
+
+2. **Run the development server:**
+
+   ```bash
+   npm run dev
+   ```
+
+3. **Open [http://localhost:3000](http://localhost:3000) in your browser**
+
+## Available Scripts
+
+- `npm run dev` - Start development server with Turbopack
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
+- `npm run lint:fix` - Fix ESLint errors
+- `npm run type-check` - Run TypeScript type checking
+- `npm run analyze` - Analyze bundle size
+
+## Project Structure
+
+```
+src/
+├── app/
+│   ├── api/
+│   │   └── fetch-content/
+│   │       └── route.ts    # Server-side content fetching API
+│   ├── layout.tsx          # Root layout with SEO configuration
+│   ├── page.tsx            # Home page with server-side SEO + client iframe
+│   ├── sitemap.ts          # Dynamic sitemap generation
+│   └── globals.css         # Global styles
+├── components/
+│   ├── OptimizedIframe.tsx # Optimized iframe component
+│   └── SEOPreview.tsx      # Development SEO preview tool
+├── lib/
+│   └── seo-content.ts      # SEO content fetching utilities
+└── config/
+    └── seo.ts              # SEO configuration
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## SEO Optimizations
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Meta Tags
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Comprehensive meta tags including Open Graph and Twitter Cards
+- Dynamic title templates
+- Structured data support
+- Canonical URLs
 
-## Learn More
+### Performance
 
-To learn more about Next.js, take a look at the following resources:
+- Lazy loading iframe with Intersection Observer
+- Preconnect and DNS prefetch for external domains
+- Optimized bundle with tree shaking
+- Image optimization with Next.js Image component
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Accessibility
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Semantic HTML structure
+- ARIA labels and roles
+- Screen reader friendly content
+- Keyboard navigation support
 
-## Deploy on Vercel
+### Security
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- CSP headers configured
+- Iframe sandboxing
+- Secure referrer policies
+- XSS protection headers
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🎯 Key Features:
+
+- **🔒 Security**: Proper iframe sandboxing and security headers
+- **⚡ Performance**: Optimized loading with intersection observer
+- **📱 Responsive**: Mobile-friendly design
+- **♿ Accessibility**: Screen reader friendly with ARIA labels
+- **🎨 Modern UI**: Clean loading states and error handling
+- **📊 Advanced SEO**: Server-side content fetching for better indexing
+- **🔍 Smart Content Extraction**: Automatic parsing of external content
+
+### 🌟 Advanced SEO Features:
+
+- **Server-side Content Fetching**: Automatically fetches and parses content from the iframe source
+- **Dynamic Meta Generation**: Creates SEO meta tags based on fetched content
+- **Content Extraction**: Extracts headings, paragraphs, and images for search engines
+- **Cached Results**: 1-hour cache for performance optimization
+- **Fallback Content**: Graceful degradation when fetching fails
+- **SEO Preview**: Development tool to preview extracted SEO data

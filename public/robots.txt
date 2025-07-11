@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://your-domain.com/sitemap.xml
+
+# Disallow search and admin pages
+Disallow: /search
+Disallow: /admin
+Disallow: /api/
+
+# Allow well-known paths
+Allow: /.well-known/
