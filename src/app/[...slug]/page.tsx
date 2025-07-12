@@ -319,6 +319,7 @@ export default async function DynamicPage({ params }: PageProps) {
             title={seoContent.title}
             className="w-full min-h-screen border-0"
             favicon={seoContent.favicon}
+            themeColor={process.env.NEXT_PUBLIC_THEME_COLOR}
           />
 
           {/* Development SEO preview */}

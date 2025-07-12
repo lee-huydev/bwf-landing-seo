@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-// import { themeConfig } from "@/lib/theme-config";
 
 interface OptimizedIframeProps {
   src?: string;
@@ -10,29 +9,21 @@ interface OptimizedIframeProps {
   loading?: "lazy" | "eager";
   sandbox?: string;
   favicon?: string;
+  themeColor?: string;
 }
 
 export default function OptimizedIframe({
-  src = process.env.NEXT_PUBLIC_IFRAME_URL ||
-    "https://bwfventures.framer.website",
+  src = "https://bwfventures.framer.website",
   className = "",
   loading = "lazy",
   sandbox = "allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation",
   favicon,
+  themeColor = "#3b82f6",
 }: OptimizedIframeProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [isIntersecting, setIsIntersecting] = useState(false);
   const [progress, setProgress] = useState(0);
-  //   const [clientThemeColor, setClientThemeColor] = useState("#3b82f6");
-
-  //   // Set theme color on client-side to avoid SSR mismatch
-  //   useEffect(() => {
-  //     setClientThemeColor(themeConfig.primaryColor);
-  //   }, []);
-
-  // Use client theme color
-  //   const themeColor = clientThemeColor;
 
   const handleLoad = useCallback(() => {
     setProgress(100);
@@ -50,7 +41,6 @@ export default function OptimizedIframe({
 
   // Simulate loading progress
   useEffect(() => {
-    console.log("color", process.env.NEXT_PUBLIC_THEME_COLOR);
     if (isLoading && (isIntersecting || loading === "eager")) {
       const timer = setInterval(() => {
         setProgress((prev) => {
@@ -120,7 +110,7 @@ export default function OptimizedIframe({
                     viewBox="0 0 24 24"
                     style={{
                       display: favicon ? "none" : "block",
-                      color: process.env?.NEXT_PUBLIC_THEME_COLOR || "#000000",
+                      color: themeColor,
                     }}
                   >
                     <path
@@ -139,8 +129,7 @@ export default function OptimizedIframe({
                   className="relative h-2 w-full overflow-hidden rounded-full bg-gray-200"
                   style={
                     {
-                      "--theme-color":
-                        process.env?.NEXT_PUBLIC_THEME_COLOR || "#000000",
+                      "--theme-color": themeColor,
                     } as React.CSSProperties
                   }
                 >
@@ -148,9 +137,7 @@ export default function OptimizedIframe({
                     className="h-full transition-all duration-300 ease-in-out rounded-full"
                     style={{
                       width: `${progress}%`,
-                      backgroundColor: `var(--theme-color, ${
-                        process.env?.NEXT_PUBLIC_THEME_COLOR || "#000000"
-                      })`,
+                      backgroundColor: `var(--theme-color, ${themeColor})`,
                       minWidth: progress > 0 ? "8px" : "0px",
                     }}
                   />
@@ -192,8 +179,7 @@ export default function OptimizedIframe({
               onClick={() => window.location.reload()}
               className="px-4 py-2 text-white rounded-md hover:opacity-90 transition-colors"
               style={{
-                backgroundColor:
-                  process.env?.NEXT_PUBLIC_THEME_COLOR || "#000000",
+                backgroundColor: themeColor,
               }}
             >
               Retry

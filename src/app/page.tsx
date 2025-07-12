@@ -277,9 +277,11 @@ export default async function Home() {
 
         {/* Client-side iframe for actual functionality */}
         <OptimizedIframe
+          src={process.env.NEXT_PUBLIC_IFRAME_URL}
           className="w-full h-screen"
           loading="eager"
           favicon={seoContent.favicon}
+          themeColor={process.env.NEXT_PUBLIC_THEME_COLOR}
         />
       </main>
 
