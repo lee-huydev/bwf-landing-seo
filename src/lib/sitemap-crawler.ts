@@ -16,6 +16,32 @@ export async function fetchSitemapPages(
   try {
     // Try to fetch sitemap.xml
     const sitemapUrl = `${baseUrl}/sitemap.xml`;
+
+    const pages = await fetchSitemapIndex(sitemapUrl);
+
+    if (pages.length === 0) {
+      console.warn(
+        `No pages found in sitemap at ${sitemapUrl}, falling back to manual discovery`
+      );
+      return await discoverPagesManually(baseUrl);
+    }
+
+    console.log(`Found ${pages.length} pages in sitemap`);
+    return pages;
+  } catch (error) {
+    console.warn(
+      `Error fetching sitemap, falling back to manual discovery:`,
+      error
+    );
+    return await discoverPagesManually(baseUrl);
+  }
+}
+
+/**
+ * Fetch sitemap index and all referenced sitemaps
+ */
+async function fetchSitemapIndex(sitemapUrl: string): Promise<SitemapPage[]> {
+  try {
     const response = await fetch(sitemapUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; BWF-SEO-Bot/1.0)",
@@ -26,39 +52,89 @@ export async function fetchSitemapPages(
     });
 
     if (!response.ok) {
-      console.warn(
-        `No sitemap found at ${sitemapUrl}, falling back to manual discovery`
-      );
-      return await discoverPagesManually(baseUrl);
+      throw new Error(`Failed to fetch sitemap index: ${response.status}`);
     }
 
     const sitemapXml = await response.text();
     const $ = cheerio.load(sitemapXml, { xmlMode: true });
 
-    const pages: SitemapPage[] = [];
+    // Check if this is a sitemap index
+    if ($("sitemapindex").length > 0) {
+      console.log("Found sitemap index, fetching individual sitemaps...");
 
-    $("url").each((_, element) => {
-      const loc = $(element).find("loc").text();
-      const priority =
-        parseFloat($(element).find("priority").text()) || undefined;
-      const changefreq = $(element).find("changefreq").text() || undefined;
-      const lastmod = $(element).find("lastmod").text() || undefined;
+      const allPages: SitemapPage[] = [];
+      const sitemapUrls: string[] = [];
 
-      if (loc) {
-        pages.push({
-          url: loc,
-          priority,
-          changefreq,
-          lastmod,
-        });
+      $("sitemap loc").each((_, element) => {
+        const loc = $(element).text();
+        if (loc) {
+          sitemapUrls.push(loc);
+        }
+      });
+
+      // Fetch each sitemap (limit to prevent too many requests)
+      const limitedSitemaps = sitemapUrls.slice(0, 10);
+
+      for (const url of limitedSitemaps) {
+        try {
+          const pages = await fetchSingleSitemap(url);
+          allPages.push(...pages);
+        } catch (error) {
+          console.warn(`Failed to fetch sitemap ${url}:`, error);
+        }
       }
-    });
 
-    return pages;
+      return allPages;
+    } else {
+      // This is a regular sitemap
+      return await fetchSingleSitemap(sitemapUrl);
+    }
   } catch (error) {
-    console.error("Error fetching sitemap:", error);
-    return await discoverPagesManually(baseUrl);
+    console.error("Error fetching sitemap index:", error);
+    throw error;
   }
+}
+
+/**
+ * Fetch a single sitemap XML file
+ */
+async function fetchSingleSitemap(sitemapUrl: string): Promise<SitemapPage[]> {
+  const response = await fetch(sitemapUrl, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (compatible; BWF-SEO-Bot/1.0)",
+    },
+    next: {
+      revalidate: 3600, // Cache for 1 hour
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch sitemap: ${response.status}`);
+  }
+
+  const sitemapXml = await response.text();
+  const $ = cheerio.load(sitemapXml, { xmlMode: true });
+
+  const pages: SitemapPage[] = [];
+
+  $("url").each((_, element) => {
+    const loc = $(element).find("loc").text();
+    const priority =
+      parseFloat($(element).find("priority").text()) || undefined;
+    const changefreq = $(element).find("changefreq").text() || undefined;
+    const lastmod = $(element).find("lastmod").text() || undefined;
+
+    if (loc) {
+      pages.push({
+        url: loc,
+        priority,
+        changefreq,
+        lastmod,
+      });
+    }
+  });
+
+  return pages;
 }
 
 /**

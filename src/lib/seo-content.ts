@@ -1,11 +1,16 @@
 import * as cheerio from "cheerio";
 
+// Simple in-memory cache to avoid repeated fetches
+const cache = new Map<string, { data: SEOContent; timestamp: number }>();
+const CACHE_DURATION = 3600 * 1000; // 1 hour in milliseconds
+
 export interface SEOContent {
   title: string;
   description: string;
   keywords: string;
   ogImage: string;
   canonical: string;
+  favicon: string; // Add favicon URL
   headings: string[];
   paragraphs: string[];
   images: Array<{ src?: string; alt: string }>;
@@ -14,13 +19,27 @@ export interface SEOContent {
 }
 
 export async function fetchSEOContent(url?: string): Promise<SEOContent> {
-  try {
-    const targetUrl =
-      url ||
-      process.env.NEXT_PUBLIC_IFRAME_URL ||
-      "https://bwfventures.framer.website";
+  const targetUrl =
+    url ||
+    process.env.NEXT_PUBLIC_IFRAME_URL ||
+    "https://bwfventures.framer.website";
 
-    // Direct fetch in server environment
+  // Check cache first
+  const cached = cache.get(targetUrl);
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    console.log(`Using cached SEO content for: ${targetUrl}`);
+    return cached.data;
+  }
+
+  try {
+    // Check cache first
+    const cached = cache.get(targetUrl);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      console.log(`Cache hit for: ${targetUrl}`);
+      return { ...cached.data, error: undefined }; // Return cached data without error
+    }
+
+    // Direct fetch in server environment without Next.js cache for large responses
     const response = await fetch(targetUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; BWF-SEO-Bot/1.0)",
@@ -30,9 +49,7 @@ export async function fetchSEOContent(url?: string): Promise<SEOContent> {
         "Accept-Encoding": "gzip, deflate",
         "Cache-Control": "no-cache",
       },
-      next: {
-        revalidate: 3600, // Cache for 1 hour
-      },
+      // Remove next.revalidate to avoid cache size issues
     });
 
     if (!response.ok) {
@@ -55,41 +72,97 @@ export async function fetchSEOContent(url?: string): Promise<SEOContent> {
     const ogImage = $('meta[property="og:image"]').attr("content") || "";
     const canonical = $('link[rel="canonical"]').attr("href") || targetUrl;
 
-    // Extract main content for SEO
+    // Extract favicon with multiple fallback options
+    const extractFavicon = (): string => {
+      // Priority order for favicon extraction
+      const faviconSelectors = [
+        'link[rel="icon"][type="image/svg+xml"]', // SVG favicon (best quality)
+        'link[rel="icon"][sizes*="32"]', // 32x32 favicon
+        'link[rel="icon"][sizes*="16"]', // 16x16 favicon
+        'link[rel="shortcut icon"]', // Traditional favicon
+        'link[rel="icon"]', // Generic icon
+        'link[rel="apple-touch-icon"]', // Apple touch icon as fallback
+      ];
+
+      for (const selector of faviconSelectors) {
+        const faviconUrl = $(selector).attr("href");
+        if (faviconUrl) {
+          // Convert relative URLs to absolute
+          if (faviconUrl.startsWith("http")) {
+            return faviconUrl;
+          } else if (faviconUrl.startsWith("//")) {
+            return `https:${faviconUrl}`;
+          } else if (faviconUrl.startsWith("/")) {
+            return `${new URL(targetUrl).origin}${faviconUrl}`;
+          } else {
+            return `${new URL(targetUrl).origin}/${faviconUrl}`;
+          }
+        }
+      }
+
+      // Final fallback to /favicon.ico
+      return `${new URL(targetUrl).origin}/favicon.ico`;
+    };
+
+    const favicon = extractFavicon();
+
+    // Extract main content for SEO - be more selective to reduce payload
     const headings = $("h1, h2, h3")
       .map(function () {
         return $(this).text().trim();
       })
       .get()
-      .filter((text: string) => text.length > 0);
+      .filter((text: string) => text.length > 2 && text.length < 100) // Filter reasonable heading lengths
+      .slice(0, 8); // Reduce to 8 headings
 
     const paragraphs = $("p")
       .map(function () {
         return $(this).text().trim();
       })
       .get()
-      .filter((text: string) => text.length > 20);
+      .filter((text: string) => text.length > 20 && text.length < 300) // Filter meaningful paragraphs
+      .slice(0, 3); // Reduce to 3 paragraphs
 
     const images = $("img")
       .map(function () {
+        const src = $(this).attr("src");
+        const alt = $(this).attr("alt") || "";
+        // Only include images with meaningful alt text or reasonable src
+        if (!src || src.startsWith("data:") || src.length > 200) return null;
         return {
-          src: $(this).attr("src"),
-          alt: $(this).attr("alt") || "",
+          src: src.startsWith("http")
+            ? src
+            : src.startsWith("/")
+            ? `${new URL(targetUrl).origin}${src}`
+            : src,
+          alt: alt.length > 100 ? alt.substring(0, 100) + "..." : alt,
         };
       })
-      .get();
+      .get()
+      .filter((img): img is { src: string; alt: string } => img !== null)
+      .slice(0, 3); // Reduce to 3 images
 
-    return {
+    const seoContent: SEOContent = {
       title,
       description,
       keywords,
       ogImage,
       canonical,
-      headings: headings.slice(0, 10), // Limit to first 10 headings
-      paragraphs: paragraphs.slice(0, 5), // Limit to first 5 paragraphs
-      images: images.slice(0, 5), // Limit to first 5 images
+      favicon,
+      headings,
+      paragraphs,
+      images,
       lastFetched: new Date().toISOString(),
     };
+
+    // Update cache
+    cache.set(targetUrl, { data: seoContent, timestamp: Date.now() });
+
+    console.log(
+      `SEO content fetched successfully for: ${targetUrl} (${headings.length} headings, ${paragraphs.length} paragraphs, ${images.length} images)`
+    );
+
+    return seoContent;
   } catch (error) {
     console.error("Error fetching SEO content:", error);
 
@@ -105,6 +178,13 @@ export async function fetchSEOContent(url?: string): Promise<SEOContent> {
         url ||
         process.env.NEXT_PUBLIC_IFRAME_URL ||
         "https://bwfventures.framer.website",
+      favicon: `${
+        new URL(
+          url ||
+            process.env.NEXT_PUBLIC_IFRAME_URL ||
+            "https://bwfventures.framer.website"
+        ).origin
+      }/favicon.ico`,
       headings: [
         "BWF Ventures",
         "Professional Investment Platform",

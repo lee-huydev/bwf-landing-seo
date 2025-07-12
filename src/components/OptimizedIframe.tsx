@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+// import { themeConfig } from "@/lib/theme-config";
 
 interface OptimizedIframeProps {
   src?: string;
@@ -8,29 +9,59 @@ interface OptimizedIframeProps {
   className?: string;
   loading?: "lazy" | "eager";
   sandbox?: string;
+  favicon?: string;
 }
 
 export default function OptimizedIframe({
   src = process.env.NEXT_PUBLIC_IFRAME_URL ||
     "https://bwfventures.framer.website",
-  title = "BWF Ventures - Professional Investment Platform",
   className = "",
   loading = "lazy",
   sandbox = "allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation",
+  favicon,
 }: OptimizedIframeProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [isIntersecting, setIsIntersecting] = useState(false);
+  const [progress, setProgress] = useState(0);
+  //   const [clientThemeColor, setClientThemeColor] = useState("#3b82f6");
+
+  //   // Set theme color on client-side to avoid SSR mismatch
+  //   useEffect(() => {
+  //     setClientThemeColor(themeConfig.primaryColor);
+  //   }, []);
+
+  // Use client theme color
+  //   const themeColor = clientThemeColor;
 
   const handleLoad = useCallback(() => {
-    setIsLoading(false);
-    setHasError(false);
+    setProgress(100);
+    setTimeout(() => {
+      setIsLoading(false);
+      setHasError(false);
+    }, 300);
   }, []);
 
   const handleError = useCallback(() => {
     setIsLoading(false);
     setHasError(true);
+    setProgress(0);
   }, []);
+
+  // Simulate loading progress
+  useEffect(() => {
+    console.log("color", process.env.NEXT_PUBLIC_THEME_COLOR);
+    if (isLoading && (isIntersecting || loading === "eager")) {
+      const timer = setInterval(() => {
+        setProgress((prev) => {
+          if (prev >= 90) return prev;
+          return prev + Math.random() * 15;
+        });
+      }, 200);
+
+      return () => clearInterval(timer);
+    }
+  }, [isLoading, isIntersecting, loading]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -58,12 +89,74 @@ export default function OptimizedIframe({
       role="main"
       aria-label="BWF Ventures Platform"
     >
-      {/* Loading State */}
+      {/* Loading State with Progress */}
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
-          <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-            <p className="text-gray-600">Loading BWF Ventures Platform...</p>
+        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+          <div className="w-full max-w-sm px-8">
+            <div className="space-y-6">
+              {/* Icon */}
+              <div className="flex justify-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-full shadow-lg border border-gray-200">
+                  {favicon ? (
+                    <img
+                      src={favicon}
+                      alt="Platform favicon"
+                      className="w-8 h-8 object-contain"
+                      onError={(e) => {
+                        // Fallback to lightning icon if favicon fails to load
+                        e.currentTarget.style.display = "none";
+                        e.currentTarget.nextElementSibling?.setAttribute(
+                          "style",
+                          "display: block"
+                        );
+                      }}
+                      // eslint-disable-next-line @next/next/no-img-element
+                    />
+                  ) : null}
+                  <svg
+                    className={`w-8 h-8 ${favicon ? "hidden" : "block"}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    style={{
+                      display: favicon ? "none" : "block",
+                      color: process.env?.NEXT_PUBLIC_THEME_COLOR || "#000000",
+                    }}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 10V3L4 14h7v7l9-11h-7z"
+                    />
+                  </svg>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="space-y-2">
+                <div
+                  className="relative h-2 w-full overflow-hidden rounded-full bg-gray-200"
+                  style={
+                    {
+                      "--theme-color":
+                        process.env?.NEXT_PUBLIC_THEME_COLOR || "#000000",
+                    } as React.CSSProperties
+                  }
+                >
+                  <div
+                    className="h-full transition-all duration-300 ease-in-out rounded-full"
+                    style={{
+                      width: `${progress}%`,
+                      backgroundColor: `var(--theme-color, ${
+                        process.env?.NEXT_PUBLIC_THEME_COLOR || "#000000"
+                      })`,
+                      minWidth: progress > 0 ? "8px" : "0px",
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -97,7 +190,11 @@ export default function OptimizedIframe({
             </p>
             <button
               onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 text-white rounded-md hover:opacity-90 transition-colors"
+              style={{
+                backgroundColor:
+                  process.env?.NEXT_PUBLIC_THEME_COLOR || "#000000",
+              }}
             >
               Retry
             </button>
@@ -109,7 +206,7 @@ export default function OptimizedIframe({
       {(isIntersecting || loading === "eager") && (
         <iframe
           src={src}
-          title={title}
+          //   title={title}
           loading={loading}
           sandbox={sandbox}
           onLoad={handleLoad}
@@ -121,24 +218,6 @@ export default function OptimizedIframe({
           referrerPolicy="strict-origin-when-cross-origin"
         />
       )}
-
-      {/* SEO Content for Search Engines */}
-      <div className="sr-only">
-        <h1>BWF Ventures - Professional Investment Platform</h1>
-        <p>
-          Access our comprehensive investment platform featuring advanced
-          portfolio management, real-time analytics, and professional-grade
-          investment tools. BWF Ventures provides institutional-quality
-          investment solutions for sophisticated investors.
-        </p>
-        <ul>
-          <li>Advanced Portfolio Management</li>
-          <li>Real-time Market Analytics</li>
-          <li>Professional Investment Tools</li>
-          <li>Risk Management Solutions</li>
-          <li>Performance Tracking</li>
-        </ul>
-      </div>
     </div>
   );
 }

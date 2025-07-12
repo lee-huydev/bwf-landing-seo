@@ -17,9 +17,7 @@ export async function GET(request: NextRequest) {
         "Accept-Encoding": "gzip, deflate",
         "Cache-Control": "no-cache",
       },
-      next: {
-        revalidate: 3600, // Cache for 1 hour
-      },
+      // Remove next.revalidate to avoid cache size issues with large responses
     });
 
     if (!response.ok) {
@@ -42,28 +40,40 @@ export async function GET(request: NextRequest) {
     const ogImage = $('meta[property="og:image"]').attr("content") || "";
     const canonical = $('link[rel="canonical"]').attr("href") || url;
 
-    // Extract main content for SEO
+    // Extract main content for SEO - optimized for performance and cache size
     const headings = $("h1, h2, h3")
       .map(function () {
         return $(this).text().trim();
       })
-      .get();
+      .get()
+      .filter((text: string) => text.length > 2 && text.length < 100)
+      .slice(0, 8);
 
     const paragraphs = $("p")
       .map(function () {
         return $(this).text().trim();
       })
       .get()
-      .filter((text: string) => text.length > 20);
+      .filter((text: string) => text.length > 20 && text.length < 300)
+      .slice(0, 3);
 
     const images = $("img")
       .map(function () {
+        const src = $(this).attr("src");
+        const alt = $(this).attr("alt") || "";
+        if (!src || src.startsWith("data:") || src.length > 200) return null;
         return {
-          src: $(this).attr("src"),
-          alt: $(this).attr("alt") || "",
+          src: src.startsWith("http")
+            ? src
+            : src.startsWith("/")
+            ? `${new URL(url).origin}${src}`
+            : src,
+          alt: alt.length > 100 ? alt.substring(0, 100) + "..." : alt,
         };
       })
-      .get();
+      .get()
+      .filter((img): img is { src: string; alt: string } => img !== null)
+      .slice(0, 3);
 
     return NextResponse.json({
       title,
@@ -71,9 +81,9 @@ export async function GET(request: NextRequest) {
       keywords,
       ogImage,
       canonical,
-      headings: headings.slice(0, 10), // Limit to first 10 headings
-      paragraphs: paragraphs.slice(0, 5), // Limit to first 5 paragraphs
-      images: images.slice(0, 5), // Limit to first 5 images
+      headings, // Already limited to 8
+      paragraphs, // Already limited to 3
+      images, // Already limited to 3
       lastFetched: new Date().toISOString(),
     });
   } catch (error) {
